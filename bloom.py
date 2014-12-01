@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import tornado.ioloop
 import tornado.web
+from tornado import gen
+from concurrent.futures import ThreadPoolExecutor
 from bitarray import bitarray
 import hashlib
 import sys
@@ -22,9 +24,10 @@ def getHashes(element):
     return [ reduce(lambda A, v: A*2+1 if v else A*2, h[i*hashpart:(i+1)*hashpart], 0) for i in xrange(k) ]
 
 class CmdAddHandler(tornado.web.RequestHandler):
+    @gen.coroutine
     def get(self):
         element = self.get_argument("e", strip=False)
-        hashes = getHashes(element)
+        hashes = yield thread_pool.submit(getHashes,element)
 
         for i in hashes:
             Bloom[i] = True
@@ -33,9 +36,10 @@ class CmdAddHandler(tornado.web.RequestHandler):
         self.write("ADDED\n")
 
 class CmdCheckHandler(tornado.web.RequestHandler):
+    @gen.coroutine
     def get(self):
         element = self.get_argument("e", strip=False)
-        hashes = getHashes(element)
+        hashes = yield thread_pool.submit(getHashes,element)
         
         self.set_header('Content-Type', 'text/plain; charset="utf-8"')
         for i in hashes:
@@ -50,6 +54,7 @@ class CmdCheckHandler(tornado.web.RequestHandler):
 print >> sys.stderr, "Initializing %.2f MBytes bitvector ..." % (m / float(2**20) / 8)
 Bloom = bitarray(m)
 Bloom.setall(False)
+thread_pool = ThreadPoolExecutor(4)
 print >> sys.stderr, "Initialization complete"
 
 application = tornado.web.Application([
