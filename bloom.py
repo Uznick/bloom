@@ -13,6 +13,7 @@ hashpart = 30
 m = 2 ** hashpart   # Bloom m-parameter
 k = 7       # Bloom k-parameter
 listen_port = 8888
+workers = 4
 
 def getHashes(element):
     H = hashlib.sha224()
@@ -54,7 +55,10 @@ class CmdCheckHandler(tornado.web.RequestHandler):
 print >> sys.stderr, "Initializing %.2f MBytes bitvector ..." % (m / float(2**20) / 8)
 Bloom = bitarray(m)
 Bloom.setall(False)
-thread_pool = ThreadPoolExecutor(4)
+print >> sys.stderr, "OK"
+print >> sys.stderr, "Initializing %d hash calculation workers ..." % workers
+thread_pool = ThreadPoolExecutor(workers)
+print >> sys.stderr, "OK"
 print >> sys.stderr, "Initialization complete"
 
 application = tornado.web.Application([
